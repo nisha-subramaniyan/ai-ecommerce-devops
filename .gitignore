@@ -1,0 +1,14 @@
+node_modules/
+.env
+*.tfstate
+*.tfstate.*
+.terraform/
+aws.tfvars
+inventory-aws.ini
+*.pem
+*.key
+backups/
+*.log
+__pycache__/
+.DS_Store
+kubeconfig*

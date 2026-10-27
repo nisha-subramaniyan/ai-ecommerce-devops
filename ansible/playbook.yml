@@ -1,0 +1,11 @@
+---
+# Run:  ansible-playbook -i inventory playbook.yml -K        (local machine; -K asks for sudo password)
+#       ansible-playbook -i inventory-aws.ini playbook.yml    (AWS server created by Terraform)
+# Dry-run first:  add --check --diff
+- name: Configure servers for the e-commerce platform
+  hosts: shop_servers
+  become: true
+  roles:
+    - common     # packages, deploy user, firewall, SSH hardening
+    - docker     # Docker Engine + Compose plugin
+    - app        # clone repo and start the application

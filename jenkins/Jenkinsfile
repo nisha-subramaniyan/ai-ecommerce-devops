@@ -1,0 +1,110 @@
+// Declarative pipeline: GitHub push -> build -> test -> security -> image -> scan -> push -> deploy -> health check
+pipeline {
+  agent any
+
+  options {
+    timestamps()
+    timeout(time: 30, unit: 'MINUTES')
+    buildDiscarder(logRotator(numToKeepStr: '10'))
+    disableConcurrentBuilds()
+  }
+
+  // Free-tier friendly trigger: Jenkins polls GitHub every 2 minutes.
+  // (A webhook is faster but needs a public URL - see docs/01-implementation-guide.md, step 8.)
+  triggers { pollSCM('H/2 * * * *') }
+
+  environment {
+    REGISTRY   = 'localhost:5001'                       // registry reachable by the HOST docker daemon and by kind nodes
+    BACKEND    = "${REGISTRY}/shop-backend"
+    FRONTEND   = "${REGISTRY}/shop-frontend"
+    NAMESPACE  = 'shop'
+    KUBECONFIG = '/var/jenkins_home/.kube/config'
+  }
+
+  stages {
+    stage('Checkout Source') {
+      steps {
+        checkout scm
+        script { env.TAG = sh(returnStdout: true, script: 'git rev-parse --short HEAD').trim() }
+        echo "Building commit ${env.TAG}"
+      }
+    }
+
+    stage('Install Dependencies') {
+      steps { dir('application/backend') { sh 'npm install --no-audit --no-fund' } }
+    }
+
+    stage('Build') {
+      steps { dir('application/backend') { sh 'npm run lint' } }
+    }
+
+    stage('Test') {
+      steps { dir('application/backend') { sh 'npm test' } }
+    }
+
+    stage('Security Checks') {
+      parallel {
+        stage('Secret scan (gitleaks)') {
+          steps { sh 'gitleaks detect --source . --no-banner --redact --exit-code 1' }
+        }
+        stage('Dependency scan (npm audit)') {
+          steps { dir('application/backend') { sh 'npm audit --omit=dev --audit-level=high' } }
+        }
+        stage('Config scan (trivy)') {
+          steps { // advisory only (does not fail the build): misconfiguration report for K8s/Helm/Docker files
+          sh 'trivy config --severity HIGH,CRITICAL --no-progress kubernetes helm docker || true' }
+        }
+      }
+    }
+
+    stage('Docker Build') {
+      steps {
+        sh '''
+          docker build -f docker/Dockerfile          --build-arg APP_VERSION=$TAG -t $BACKEND:$TAG  .
+          docker build -f docker/Dockerfile.frontend -t $FRONTEND:$TAG .
+        '''
+      }
+    }
+
+    stage('Image Scan') {
+      steps {
+        sh '''
+          trivy image --exit-code 1 --severity CRITICAL --ignore-unfixed --no-progress $BACKEND:$TAG
+          trivy image --exit-code 1 --severity CRITICAL --ignore-unfixed --no-progress $FRONTEND:$TAG
+        '''
+      }
+    }
+
+    stage('Push Image') {
+      steps {
+        sh '''
+          docker push $BACKEND:$TAG
+          docker push $FRONTEND:$TAG
+        '''
+      }
+    }
+
+    stage('Deploy') {
+      steps {
+        sh '''
+          helm upgrade --install shop helm/ecommerce -n $NAMESPACE --create-namespace \
+            --set image.registry=$REGISTRY --set image.tag=$TAG \
+            --wait --timeout 180s
+        '''
+      }
+    }
+
+    stage('Health Check') {
+      steps { sh 'RETRIES=15 SLEEP=4 ./scripts/health-check.sh http://host.docker.internal:8081' }
+    }
+  }
+
+  post {
+    success { echo "Deployment of ${env.TAG} succeeded" }
+    failure {
+      echo 'Pipeline failed - rolling back to the previous Helm revision (if any)'
+      sh 'helm rollback shop -n $NAMESPACE --wait || true'
+    }
+    always { sh 'docker image prune -f || true' }
+  }
+}

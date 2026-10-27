@@ -1,0 +1,8 @@
+git
+workflow-aggregator
+pipeline-stage-view
+credentials-binding
+timestamper
+ws-cleanup
+junit
+blueocean

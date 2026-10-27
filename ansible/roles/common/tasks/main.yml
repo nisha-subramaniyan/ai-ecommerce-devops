@@ -1,0 +1,36 @@
+---
+- name: Update apt cache
+  ansible.builtin.apt: { update_cache: true, cache_valid_time: 3600 }
+
+- name: Install base packages
+  ansible.builtin.apt: { name: "{{ common_packages }}", state: present }
+
+- name: Create unprivileged deploy user
+  ansible.builtin.user: { name: "{{ app_user }}", shell: /bin/bash, create_home: true }
+
+- name: Create application directory
+  ansible.builtin.file: { path: "{{ app_dir }}", state: directory, owner: "{{ app_user }}", mode: "0755" }
+
+- name: Allow configured ports through the firewall
+  community.general.ufw: { rule: allow, port: "{{ item | string }}", proto: tcp }
+  loop: "{{ firewall_allowed_ports }}"
+  when: manage_firewall | bool
+
+- name: Enable firewall (default deny incoming)
+  community.general.ufw: { state: enabled, policy: deny, direction: incoming }
+  when: manage_firewall | bool
+
+- name: Harden SSH (no root login, no password login)
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/99-hardening.conf
+    mode: "0644"
+    content: |
+      PermitRootLogin no
+      PasswordAuthentication no
+      MaxAuthTries 3
+  notify: Restart ssh
+  when: ansible_connection != "local"     # never lock yourself out of your own laptop
+
+- name: Enable fail2ban
+  ansible.builtin.service: { name: fail2ban, state: started, enabled: true }
+  when: ansible_facts.service_mgr | default('') == 'systemd'

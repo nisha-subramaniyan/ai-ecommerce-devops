@@ -1,0 +1,24 @@
+---
+- name: Clone (or update) the application repository
+  ansible.builtin.git:
+    repo: "{{ repo_url }}"
+    dest: "{{ app_dir }}"
+    version: "{{ repo_branch }}"
+    force: true
+  become_user: "{{ app_user }}"
+  when: deploy_application
+
+- name: Start the application with Docker Compose
+  ansible.builtin.command: docker compose -f docker/docker-compose.yml up -d --build
+  args: { chdir: "{{ app_dir }}" }
+  when: deploy_application
+  register: compose_up
+  changed_when: "'Started' in compose_up.stderr or 'Created' in compose_up.stderr"
+
+- name: Wait until the website answers
+  ansible.builtin.uri: { url: "http://localhost:8080/health", status_code: 200 }
+  register: health
+  retries: 20
+  delay: 5
+  until: health.status == 200
+  when: deploy_application

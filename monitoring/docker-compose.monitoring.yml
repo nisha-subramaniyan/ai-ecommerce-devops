@@ -1,0 +1,45 @@
+# Prometheus + Grafana + cAdvisor for the Compose environment.
+# Start the app first:  docker compose -f docker/docker-compose.yml up -d --build
+# Then:                 docker compose -f monitoring/docker-compose.monitoring.yml up -d
+# URLs: Prometheus http://localhost:9090   Grafana http://localhost:3001 (admin / admin)
+name: monitoring
+services:
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+      - prom-data:/prometheus
+    ports: ["9090:9090"]
+    networks: [shop_net]
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports: ["3001:3000"]
+    depends_on: [prometheus]
+    networks: [shop_net]
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks: [shop_net]
+
+volumes:
+  prom-data:
+  grafana-data:
+
+networks:
+  shop_net:
+    external: true
+    name: shop_backend-net      # created by docker/docker-compose.yml (project "shop")

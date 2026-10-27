@@ -1,0 +1,19 @@
+# Values for the kube-prometheus-stack Helm chart (Prometheus + Grafana + Alertmanager + node/pod exporters).
+# Trimmed for a laptop-sized kind cluster.
+#   helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+#   helm upgrade --install kube-prom prometheus-community/kube-prometheus-stack -n monitoring --create-namespace -f monitoring/k8s-values.yaml
+grafana:
+  adminPassword: admin            # lab only - change for anything shared
+  service: { type: ClusterIP }
+  sidecar:
+    dashboards: { enabled: true, label: grafana_dashboard, searchNamespace: ALL }
+prometheus:
+  prometheusSpec:
+    retention: 3d
+    resources: { requests: { cpu: 100m, memory: 400Mi } }
+    # Pick up ServiceMonitors from every namespace, not only ones labelled for this release
+    serviceMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+alertmanager:
+  enabled: true
+  alertmanagerSpec: { resources: { requests: { cpu: 10m, memory: 50Mi } } }

@@ -1,0 +1,53 @@
+# GitHub Actions = the "CI alternative" from the architecture report. 100% free for public repos.
+# It runs the same quality + security gates as Jenkins, in GitHub's cloud, on every push and pull request.
+name: ci
+on:
+  push: { branches: [main, develop] }
+  pull_request: { branches: [main, develop] }
+
+jobs:
+  test-and-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }              # gitleaks scans history
+
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+
+      - name: Install, lint, test
+        working-directory: application/backend
+        run: |
+          npm install --no-audit --no-fund
+          npm run lint
+          npm test
+
+      - name: Dependency audit
+        working-directory: application/backend
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env: { GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
+
+      - name: Build images
+        run: |
+          docker build -f docker/Dockerfile -t shop-backend:ci .
+          docker build -f docker/Dockerfile.frontend -t shop-frontend:ci .
+
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: shop-backend:ci
+          severity: CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
+
+      - name: Lint Helm chart
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          helm lint helm/ecommerce
+          helm template shop helm/ecommerce > /dev/null
+
+      - name: AI analyser unit tests
+        run: python3 -m unittest discover -s ai/incident-analysis/tests -v

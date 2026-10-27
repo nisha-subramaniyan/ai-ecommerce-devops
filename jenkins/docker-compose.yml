@@ -1,0 +1,27 @@
+# Jenkins in Docker. Start it AFTER the kind cluster exists (it joins the "kind" network).
+#   1) ./scripts/deploy.sh local                      (creates cluster + registry)
+#   2) kind get kubeconfig --internal --name shop > jenkins/kubeconfig
+#   3) docker compose -f jenkins/docker-compose.yml up -d --build
+#   4) docker compose -f jenkins/docker-compose.yml exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword
+name: jenkins
+services:
+  jenkins:
+    build: .
+    image: shop-jenkins:local
+    user: root                                   # needed to use the host's docker socket (lab setup only)
+    ports:
+      - "8090:8080"                              # UI: http://localhost:8090
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock   # Jenkins builds images using the HOST docker daemon
+      - ./kubeconfig:/var/jenkins_home/.kube/config:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"      # lets Jenkins reach the ingress on the host (port 8081)
+    networks: [kind]
+    restart: unless-stopped
+volumes:
+  jenkins_home:
+networks:
+  kind:
+    external: true

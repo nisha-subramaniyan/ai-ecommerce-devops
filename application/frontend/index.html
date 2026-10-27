@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DevShop</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; background: #f5f6fa; color: #1c2333; }
+    header { background: #1c2333; color: #fff; padding: 16px 24px; display: flex; justify-content: space-between; }
+    main { max-width: 900px; margin: 24px auto; padding: 0 16px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+    .card { background: #fff; border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+    button { background: #2f6fed; color: #fff; border: 0; padding: 8px 14px; border-radius: 6px; cursor: pointer; }
+    #msg { margin-top: 16px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <header><strong>DevShop</strong><span id="cart">Cart: 0 items</span></header>
+  <main>
+    <div id="grid" class="grid"></div>
+    <p><button id="checkout">Checkout</button> <small id="ver"></small></p>
+    <div id="msg"></div>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

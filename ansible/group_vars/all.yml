@@ -1,0 +1,11 @@
+---
+# Variables shared by every role. Override on the command line:  -e repo_url=https://github.com/YOU/ai-ecommerce-devops.git
+app_user: deploy
+app_dir: /opt/shop
+repo_url: "https://github.com/YOUR-USERNAME/ai-ecommerce-devops.git"
+repo_branch: main
+common_packages: [git, curl, wget, unzip, jq, htop, ufw, fail2ban, unattended-upgrades, python3-pip]
+firewall_allowed_ports: [22, 80, 8080]
+deploy_application: true      # set false to configure the server only
+# Firewall + SSH hardening only on remote servers by default (never lock yourself out of your own laptop)
+manage_firewall: "{{ ansible_connection != 'local' }}"

@@ -1,0 +1,7 @@
+# Copy to aws.tfvars (git-ignored), edit, then:
+#   terraform apply -var-file=environments/aws.tfvars
+target        = "aws"
+project       = "shop"
+aws_region    = "ap-south-1"
+instance_type = "t3.micro"
+admin_cidr    = "YOUR.PUBLIC.IP.ADDR/32"   # find it: curl ifconfig.me

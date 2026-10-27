@@ -1,0 +1,11 @@
+# ConfigMap = NON-secret configuration injected as environment variables.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: shop-config
+  namespace: shop
+data:
+  PORT: "3000"
+  NODE_ENV: "production"
+  APP_VERSION: "k8s-manifests"
+  ENABLE_CHAOS: "false"

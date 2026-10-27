@@ -1,0 +1,15 @@
+# Horizontal Pod Autoscaler: scale backend between 2 and 6 pods at 70% CPU.
+# Needs metrics-server:  kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+# (on kind also add --kubelet-insecure-tls to the metrics-server args)
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: shop-backend
+  namespace: shop
+spec:
+  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: shop-backend }
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource: { name: cpu, target: { type: Utilization, averageUtilization: 70 } }

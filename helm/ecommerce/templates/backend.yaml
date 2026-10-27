@@ -1,0 +1,105 @@
+# ---- Stable backend ("blue" colour) ----
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shop-backend
+  labels: { app: shop-backend, track: stable }
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.backend.replicas }}
+  {{- end }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  selector:
+    matchLabels: { app: shop-backend, track: stable }
+  template:
+    metadata:
+      labels: { app: shop-backend, track: stable, color: blue }
+    spec:
+      securityContext: { runAsNonRoot: true, runAsUser: 1000, seccompProfile: { type: RuntimeDefault } }
+      containers:
+        {{- include "shop.backendContainer" (dict "root" . "image" (include "shop.backendImage" .) "version" .Values.image.tag) | nindent 8 }}
+{{- if .Values.canary.enabled }}
+---
+# ---- Canary: a few pods running the NEW version, selected by the same Service ----
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shop-backend-canary
+  labels: { app: shop-backend, track: canary }
+spec:
+  replicas: {{ .Values.canary.replicas }}
+  selector:
+    matchLabels: { app: shop-backend, track: canary }
+  template:
+    metadata:
+      labels: { app: shop-backend, track: canary, color: blue }
+    spec:
+      securityContext: { runAsNonRoot: true, runAsUser: 1000, seccompProfile: { type: RuntimeDefault } }
+      containers:
+        {{- include "shop.backendContainer" (dict "root" . "image" (printf "%s/shop-backend:%s" .Values.image.registry .Values.canary.tag) "version" .Values.canary.tag) | nindent 8 }}
+{{- end }}
+{{- if .Values.blueGreen.enabled }}
+---
+# ---- Green: full second copy of the backend; gets traffic only when blueGreen.active=green ----
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shop-backend-green
+  labels: { app: shop-backend, track: green }
+spec:
+  replicas: {{ .Values.backend.replicas }}
+  selector:
+    matchLabels: { app: shop-backend, track: green }
+  template:
+    metadata:
+      labels: { app: shop-backend, track: green, color: green }
+    spec:
+      securityContext: { runAsNonRoot: true, runAsUser: 1000, seccompProfile: { type: RuntimeDefault } }
+      containers:
+        {{- include "shop.backendContainer" (dict "root" . "image" (printf "%s/shop-backend:%s" .Values.image.registry .Values.blueGreen.greenTag) "version" .Values.blueGreen.greenTag) | nindent 8 }}
+{{- end }}
+---
+# Service "backend": the name nginx proxies to. With blue/green enabled the selector also pins a colour.
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  labels: { app: shop-backend }
+spec:
+  selector:
+    app: shop-backend
+    {{- if .Values.blueGreen.enabled }}
+    color: {{ .Values.blueGreen.active }}
+    {{- end }}
+  ports:
+    - { name: http, port: {{ .Values.backend.port }}, targetPort: http }
+{{- if .Values.autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: shop-backend
+spec:
+  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: shop-backend }
+  minReplicas: {{ .Values.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource: { name: cpu, target: { type: Utilization, averageUtilization: {{ .Values.autoscaling.cpuUtilization }} } }
+{{- end }}
+{{- if and .Values.monitoring.serviceMonitor.enabled (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1") }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: shop-backend
+  labels:
+    release: {{ .Values.monitoring.serviceMonitor.releaseLabel }}
+spec:
+  selector:
+    matchLabels: { app: shop-backend }
+  endpoints:
+    - { port: http, path: /metrics, interval: 15s }
+{{- end }}

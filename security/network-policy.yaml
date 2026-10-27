@@ -1,0 +1,59 @@
+# Least-privilege networking inside the "shop" namespace:
+#   - default: nothing can talk to anything
+#   - ingress controller -> frontend; frontend -> backend; backend -> postgres; DNS allowed
+# NOTE: enforcement needs a CNI that supports NetworkPolicy (Calico/Cilium). kind's default CNI does NOT enforce
+# them, so on kind this documents intent; on a real cluster / k3s-with-Calico it is enforced.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: default-deny-all, namespace: shop }
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: allow-dns, namespace: shop }
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to: [{ namespaceSelector: {} }]
+      ports: [{ protocol: UDP, port: 53 }, { protocol: TCP, port: 53 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: frontend-ingress-and-egress, namespace: shop }
+spec:
+  podSelector: { matchLabels: { app: shop-frontend } }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from: [{ namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: ingress-nginx } } }]
+      ports: [{ port: 8080 }]
+  egress:
+    - to: [{ podSelector: { matchLabels: { app: shop-backend } } }]
+      ports: [{ port: 3000 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: backend-policy, namespace: shop }
+spec:
+  podSelector: { matchLabels: { app: shop-backend } }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector: { matchLabels: { app: shop-frontend } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: monitoring } }   # Prometheus scraping
+      ports: [{ port: 3000 }]
+  egress:
+    - to: [{ podSelector: { matchLabels: { app: shop-postgres } } }]
+      ports: [{ port: 5432 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: postgres-policy, namespace: shop }
+spec:
+  podSelector: { matchLabels: { app: shop-postgres } }
+  policyTypes: [Ingress]
+  ingress:
+    - from: [{ podSelector: { matchLabels: { app: shop-backend } } }]
+      ports: [{ port: 5432 }]

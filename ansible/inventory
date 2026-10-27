@@ -1,0 +1,4 @@
+# Default inventory: configure THIS machine (or the Ubuntu VM you are logged into). Zero cost.
+# For the AWS server use the file Terraform generates:  -i inventory-aws.ini
+[shop_servers]
+localhost ansible_connection=local

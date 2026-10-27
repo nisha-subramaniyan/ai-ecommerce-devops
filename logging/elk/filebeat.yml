@@ -1,0 +1,28 @@
+# Filebeat: tail every container's log file, attach container metadata, keep only the shop containers,
+# decode our JSON log lines, and ship to Logstash.
+filebeat.inputs:
+  - type: container
+    paths:
+      - /var/lib/docker/containers/*/*.log
+
+processors:
+  - add_docker_metadata:
+      host: "unix:///var/run/docker.sock"
+  - drop_event:
+      when:
+        not:
+          regexp:
+            container.name: "^shop-(backend|frontend|db)"
+  - decode_json_fields:
+      when:
+        regexp:
+          message: '^\{'
+      fields: ["message"]
+      target: "app"
+      overwrite_keys: true
+      add_error_key: false
+
+output.logstash:
+  hosts: ["logstash:5044"]
+
+logging.level: warning

@@ -1,0 +1,49 @@
+# Local multi-service environment: frontend (Nginx) -> backend (Node) -> database (Postgres)
+# Run from repo root:  docker compose -f docker/docker-compose.yml up -d --build
+name: shop
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: shop
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-shop-dev-password}   # override with .env, never commit real secrets
+      POSTGRES_DB: shop
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shop -d shop"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [backend-net]
+
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args: { APP_VERSION: "compose" }
+    image: shop-backend:local
+    environment:
+      DATABASE_URL: postgres://shop:${DB_PASSWORD:-shop-dev-password}@db:5432/shop
+      ENABLE_CHAOS: ${ENABLE_CHAOS:-true}      # demo failure endpoint (local only)
+    depends_on:
+      db: { condition: service_healthy }
+    networks: [backend-net]
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+    image: shop-frontend:local
+    ports:
+      - "8080:8080"
+    depends_on: [backend]
+    networks: [backend-net]
+    restart: unless-stopped
+
+volumes:
+  db-data:
+
+networks:
+  backend-net:

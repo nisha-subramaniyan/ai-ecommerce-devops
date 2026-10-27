@@ -1,0 +1,53 @@
+# Every value here can be overridden:  helm upgrade --install shop helm/ecommerce --set image.tag=abc123
+image:
+  registry: localhost:5001
+  tag: latest
+  pullPolicy: IfNotPresent
+
+backend:
+  replicas: 2
+  port: 3000
+  enableChaos: false          # true only for the AI/monitoring demo (exposes /api/chaos/error)
+  resources:
+    requests: { cpu: 100m, memory: 128Mi }
+    limits: { cpu: 500m, memory: 256Mi }
+
+frontend:
+  replicas: 2
+  resources:
+    requests: { cpu: 50m, memory: 32Mi }
+    limits: { cpu: 200m, memory: 128Mi }
+
+postgres:
+  image: postgres:16-alpine
+  storage: 1Gi
+  password: demo-only-change-me   # override: --set postgres.password=$(openssl rand -hex 16)
+
+ingress:
+  enabled: true
+  className: nginx
+  host: ""                        # empty = match any host (works with http://localhost:8081)
+
+autoscaling:
+  enabled: false                  # needs metrics-server
+  minReplicas: 2
+  maxReplicas: 6
+  cpuUtilization: 70
+
+# Prometheus Operator integration. Only rendered when the ServiceMonitor CRD exists
+# (i.e. after kube-prometheus-stack is installed), so it is safe to leave enabled.
+monitoring:
+  serviceMonitor:
+    enabled: true
+    releaseLabel: kube-prom       # must match the Helm release name of kube-prometheus-stack
+
+# ---- Deployment strategies (see scripts/deploy-strategy.sh) ----
+canary:
+  enabled: false
+  tag: ""
+  replicas: 1
+
+blueGreen:
+  enabled: false
+  active: blue                    # which colour receives traffic: blue | green
+  greenTag: ""
