@@ -3,10 +3,17 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY application/backend/package*.json ./
-RUN npm install --omit=dev --no-audit --no-fund && npm cache clean --force
+RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 
 # Stage 2: small runtime image
 FROM node:20-alpine
+
+# Update npm and its bundled dependencies to address the vulnerable tar
+# npm is not required at runtime; remove its bundled dependencies
+RUN rm -rf /usr/local/lib/node_modules/npm \
+           /usr/local/bin/npm \
+           /usr/local/bin/npx
+
 ENV NODE_ENV=production PORT=3000
 ARG APP_VERSION=dev
 ENV APP_VERSION=${APP_VERSION}
