@@ -38,10 +38,26 @@ class AnalyzeTests(unittest.TestCase):
         self.assertEqual(rep["status"], "incident")
 
     def test_cli_on_sample_file_exits_1_and_prints_report(self):
-        p = subprocess.run([sys.executable, os.path.join(HERE, "analyze.py"), "--file",
-                            os.path.join(HERE, "sample_logs", "db_timeout.log")], capture_output=True, text=True)
-        self.assertEqual(p.returncode, 1)
-        self.assertIn("Database / network connectivity", p.stdout)
+        sample = os.path.join(HERE, "sample_logs", "db_timeout.log")
+        script = os.path.join(HERE, "analyze.py")
+
+        p = subprocess.run(
+            [sys.executable, script, "--file", sample],
+            capture_output=True,
+            text=True,
+            cwd=HERE,
+        )
+
+        self.assertEqual(
+            p.returncode, 1,
+            f"Expected exit code 1 for an incident.\n"
+            f"STDOUT:\n{p.stdout}\nSTDERR:\n{p.stderr}"
+        )
+        self.assertIn(
+            "Database / network connectivity",
+            p.stdout,
+            f"Expected database incident in report.\nSTDERR:\n{p.stderr}"
+        )
         self.assertIn("Resource exhaustion (memory)", p.stdout)
 
 
