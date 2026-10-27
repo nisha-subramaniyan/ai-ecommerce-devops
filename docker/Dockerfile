@@ -3,7 +3,7 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY application/backend/package*.json ./
-RUN npm install --omit=dev --no-audit --no-fund && npm cache clean --force
+RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 
 # Stage 2: small runtime image
 FROM node:20-alpine
