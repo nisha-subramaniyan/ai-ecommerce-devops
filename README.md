@@ -67,3 +67,4 @@ Demo passwords (`demo-only-change-me`, Grafana `admin/admin`) and the disabled E
 1. [Implementation guide](docs/01-implementation-guide.md)
 2. [Architecture](docs/02-architecture.md)
 3. [Troubleshooting](docs/03-troubleshooting.md)
+
