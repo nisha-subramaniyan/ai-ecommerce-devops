@@ -1,14 +1,38 @@
+```gitignore
+# Node.js
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+
+# Environment variables and secrets
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+aws.tfvars
+inventory-aws.ini
+kubeconfig*
+
+# Terraform
 *.tfstate
 *.tfstate.*
 .terraform/
-aws.tfvars
-inventory-aws.ini
-*.pem
-*.key
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Backups and logs
 backups/
 *.log
+
+# Python
 __pycache__/
+*.py[cod]
+
+# OS metadata
 .DS_Store
-kubeconfig*
+*:Zone.Identifier
+```
