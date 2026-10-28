@@ -81,7 +81,7 @@ case "$TARGET" in
     log "Open http://localhost:8081  (ingress) - rollout history: helm history shop -n $NAMESPACE"
     ;;
   down)
-    docker compose -f "$ROOT/docker/docker-compose.yml" down -v 2>/dev/null || true
+    docker compose -f "$ROOT/docker/docker-compose.yml" down 2>/dev/null || true
     kind delete cluster --name "$CLUSTER" 2>/dev/null || true
     docker rm -f kind-registry 2>/dev/null || true
     log "Everything removed"
