@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # deploy.sh - one command to run the application in different targets.
-#   ./scripts/deploy.sh compose            -> Docker Compose on localhost:8080
+#   ./scripts/deploy.sh compose            -> Docker Compose on localhost:8081
 #   ./scripts/deploy.sh cluster            -> only create the registry + kind cluster + ingress (no app)
 #   ./scripts/deploy.sh build [tag]        -> build and push both images to the local registry
 #   ./scripts/deploy.sh local [tag]        -> cluster + build + Helm release (needs: kind, kubectl, helm, docker)
@@ -55,7 +55,7 @@ case "$TARGET" in
   compose)
     docker compose -f "$ROOT/docker/docker-compose.yml" up -d --build
     "$ROOT/scripts/health-check.sh" compose
-    log "Open http://localhost:8080"
+    log "Open http://localhost:8081"
     ;;
   cluster)
     start_registry_and_cluster
