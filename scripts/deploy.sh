@@ -78,7 +78,7 @@ case "$TARGET" in
     helm upgrade --install shop "$ROOT/helm/ecommerce" -n "$NAMESPACE" --create-namespace \
       --set image.registry="$REGISTRY" --set image.tag="$TAG" --wait --timeout 180s
     "$ROOT/scripts/health-check.sh" k8s
-    log "Open http://localhost:8081  (ingress) - rollout history: helm history shop -n $NAMESPACE"
+    log "Open http://localhost:8082  (ingress) - rollout history: helm history shop -n $NAMESPACE"
     ;;
   down)
     docker compose -f "$ROOT/docker/docker-compose.yml" down 2>/dev/null || true
