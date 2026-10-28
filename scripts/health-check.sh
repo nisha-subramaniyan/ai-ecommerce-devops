@@ -7,7 +7,7 @@ set -uo pipefail
 TARGET="${1:-compose}"
 case "$TARGET" in
   compose) URL="http://localhost:8081" ;;
-  k8s)     URL="http://localhost:8081" ;;   # kind maps ingress to host port 8081
+  k8s)     URL="http://localhost:8082" ;;   # kind maps ingress to host port 8081
   http*)   URL="$TARGET" ;;
   *) echo "usage: $0 {compose|k8s|<url>}"; exit 2 ;;
 esac
