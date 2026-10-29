@@ -10,7 +10,7 @@ services:
     image: shop-jenkins:local
     user: root                                   # needed to use the host's docker socket (lab setup only)
     ports:
-      - "8090:8080"                              # UI: http://localhost:8090
+      - "8080:8080"                              # UI: http://localhost:8080
       - "50000:50000"
     volumes:
       - jenkins_home:/var/jenkins_home
