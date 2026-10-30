@@ -19,6 +19,7 @@ pipeline {
     FRONTEND   = "${REGISTRY}/shop-frontend"
     NAMESPACE  = 'shop'
     KUBECONFIG = '/var/lib/jenkins/.kube/config'
+    TRIVY_CACHE = "${WORKSPACE}/.trivy-cache-${BUILD_NUMBER}"
   }
 
   stages {
@@ -52,7 +53,7 @@ pipeline {
         }
         stage('Config scan (trivy)') {
           steps { // advisory only (does not fail the build): misconfiguration report for K8s/Helm/Docker files
-          sh 'trivy config --severity HIGH,CRITICAL . || true' }
+          sh 'trivy --cache-dir "$TRIVY_CACHE" config --severity HIGH,CRITICAL . || true' }
         }
       }
     }
@@ -69,8 +70,8 @@ pipeline {
     stage('Image Scan') {
       steps {
         sh '''
-          trivy image --exit-code 1 --severity CRITICAL --ignore-unfixed $BACKEND:$TAG
-          trivy image --exit-code 1 --severity CRITICAL --ignore-unfixed $FRONTEND:$TAG
+          trivy --cache-dir "$TRIVY_CACHE" image --exit-code 1 --severity CRITICAL --ignore-unfixed "$BACKEND:$TAG"
+          trivy --cache-dir "$TRIVY_CACHE" image --exit-code 1 --severity CRITICAL --ignore-unfixed "$FRONTEND:$TAG"
         '''
       }
     }
