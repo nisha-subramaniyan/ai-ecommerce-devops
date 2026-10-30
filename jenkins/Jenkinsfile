@@ -95,7 +95,7 @@ pipeline {
     }
 
     stage('Health Check') {
-      steps { sh 'RETRIES=15 SLEEP=4 ./scripts/health-check.sh http://host.docker.internal:8081' }
+      steps { sh 'RETRIES=15 SLEEP=4 ./scripts/health-check.sh http://localhost:8082' }
     }
   }
 
