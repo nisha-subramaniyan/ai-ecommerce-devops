@@ -1,6 +1,5 @@
 # ---- Frontend image: Nginx (unprivileged) serving static files + reverse proxy ----
-FROM nginxinc/nginx-unprivileged:1.27-alpine
+FROM nginx/nginx-unprivileged:stable@sha256:54512217498d1789da3f3fe3ab7a9d102b5c81dea4b0ce6a0312e4d911cb6a3a
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 COPY application/frontend/ /usr/share/nginx/html/
 EXPOSE 8080
-HEALTHCHECK --interval=15s --timeout=3s CMD wget -qO- http://127.0.0.1:8080/health || exit 1

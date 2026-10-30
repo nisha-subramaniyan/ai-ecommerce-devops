@@ -102,8 +102,8 @@ pipeline {
   post {
     success { echo "Deployment of ${env.TAG} succeeded" }
     failure {
-      echo 'Pipeline failed - rolling back to the previous Helm revision (if any)'
-      sh 'helm --kubeconfig="$KUBECONFIG" rollback shop -n $NAMESPACE --wait || true'
+      echo 'Pipeline failed. Automatic rollback is disabled until a known-good corrected Helm revision exists.'
+      echo 'Check the failed stage and Kubernetes workload status before taking deployment recovery action.'
     }
     always { sh 'docker image prune -f || true' }
   }
